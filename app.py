@@ -31,8 +31,13 @@ html = """
             };
             function sendMessage(event) {
                 var input = document.getElementById("messageText")
-                ws.send(input.value)
-                input.value = ''
+                if (input.value === '') {
+                    alert('Message cannot be empty')
+                } else {
+                    ws.send(input.value)
+                    input.value = ''
+                    
+                }
                 event.preventDefault()
             }
         </script>
