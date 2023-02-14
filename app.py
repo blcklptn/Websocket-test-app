@@ -25,7 +25,7 @@ html = """
                 var messages = document.getElementById('messages')
                 var message = document.createElement('li')
                 var json_object = JSON.parse(event.data)
-                var content = document.createTextNode(json_object['message'])
+                var content = document.createTextNode(json_object['id'] + ' - ' +json_object['message'])
                 message.appendChild(content)
                 messages.appendChild(message)
             };
@@ -48,23 +48,24 @@ html = """
 # Пусть и не самый оптимальный способ хранения данных, но задумка была в том, чтобы мы
 # с этого массива переносили в другой, дабы можно было хрнаить сообщения, но и удалять при обновлении
 # отсюда
-messages = []
+count = 0
 
 @app.get("/")
 async def get():
-    global messages
+    global count
+    count = 0
     return HTMLResponse(html)
 
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global messages
+    global count
     await websocket.accept()
     while True:
         data_raw = await websocket.receive_text()
         data = json.loads(data_raw) # Распаковка JSON объекта
-        messages.append(data['message'])
-        json_object = json.dumps({'message' : str(len(messages)) + ' - '+ data['message']}) # Создание JSON обьекта
+        count += 1
+        json_object = json.dumps({'message' : data['message'], 'id': count}) # Создание JSON обьекта
         await websocket.send_text(json_object)
 
 
