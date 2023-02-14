@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
 import uvicorn
+import json
 
 app = FastAPI()
 
@@ -19,13 +20,12 @@ html = """
         <ul id='messages'>
         </ul>
         <script>
-            var current_index = 1;
             var ws = new WebSocket("ws://localhost:8000/ws");
             ws.onmessage = function(event) {
                 var messages = document.getElementById('messages')
                 var message = document.createElement('li')
-                var content = document.createTextNode(current_index + ' '+ event.data)
-                current_index++;
+                var json_object = JSON.parse(event.data)
+                var content = document.createTextNode(json_object['message'])
                 message.appendChild(content)
                 messages.appendChild(message)
             };
@@ -34,7 +34,7 @@ html = """
                 if (input.value === '') {
                     alert('Message cannot be empty')
                 } else {
-                    ws.send(input.value)
+                    ws.send(JSON.stringify({message : input.value}))
                     input.value = ''
                     
                 }
@@ -45,18 +45,27 @@ html = """
 </html>
 """
 
+# Пусть и не самый оптимальный способ хранения данных, но задумка была в том, чтобы мы
+# с этого массива переносили в другой, дабы можно было хрнаить сообщения, но и удалять при обновлении
+# отсюда
+messages = []
 
 @app.get("/")
 async def get():
+    global messages
     return HTMLResponse(html)
 
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    global messages
     await websocket.accept()
     while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(f"Message text was: {data}")
+        data_raw = await websocket.receive_text()
+        data = json.loads(data_raw) # Распаковка JSON объекта
+        messages.append(data['message'])
+        json_object = json.dumps({'message' : str(len(messages)) + ' - '+ data['message']}) # Создание JSON обьекта
+        await websocket.send_text(json_object)
 
 
 if __name__ == '__main__':
