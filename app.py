@@ -20,12 +20,14 @@ html = """
         <ul id='messages'>
         </ul>
         <script>
+            var id = 0;
             var ws = new WebSocket("ws://localhost:8000/ws");
             ws.onmessage = function(event) {
                 var messages = document.getElementById('messages')
                 var message = document.createElement('li')
                 var json_object = JSON.parse(event.data)
-                var content = document.createTextNode(json_object['id'] + ' - ' +json_object['message'])
+                id ++;
+                var content = document.createTextNode(id + ' - ' +json_object['message'])
                 message.appendChild(content)
                 messages.appendChild(message)
             };
@@ -45,24 +47,18 @@ html = """
 </html>
 """
 
-count = 0
-
 @app.get("/")
 async def get():
-    global count
-    count = 0
     return HTMLResponse(html)
 
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global count
     await websocket.accept()
     while True:
         data_raw = await websocket.receive_text()
         data = json.loads(data_raw) # Распаковка JSON объекта
-        count += 1
-        json_object = json.dumps({'message' : data['message'], 'id': count}) # Создание JSON обьекта
+        json_object = json.dumps({'message' : data['message']}) # Создание JSON обьекта
         await websocket.send_text(json_object)
 
 
